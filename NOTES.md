@@ -1,8 +1,20 @@
 # Green Heron remote switch panel — protocol
 
-Device: `192.0.2.10:10000` (TCP). Official software: **GH Everyware Client**
+Endpoint: `<everyware-server>:10000` (TCP). Official software: **GH Everyware Client**
 (Windows; runs under Wine here). There is no vendor documentation — everything below
-was reverse-engineered from packet captures and from talking to the live device.
+was reverse-engineered from packet captures and from talking to a live installation.
+
+**What is on the far end of port 10000 is the Everyware *server*, not a switch.** It is
+a Java service (`com.ghe.gh_everyware.GH_TCPServer`) running on a PC, with the switch
+hardware attached to it over serial. Everything this client talks to is that server;
+the antenna switches themselves are never addressed directly. The same host typically
+also exposes raw serial ports as TCP (4001+) for other equipment such as rotator
+controllers, which speak entirely different protocols and are out of scope here.
+
+One consequence worth knowing: a single Everyware server presents several switches, and
+switch names are only unique within one server. An installation with two servers can
+have `AS-84F-1` on both, so anything driving more than one must key on host + switch
+name rather than switch name alone.
 
 The protocol is **fully decoded in both directions** and verified end-to-end: this
 client's `SET_SWITCH` bytes are byte-identical to the official client's, and the device
@@ -138,9 +150,31 @@ Parsed into named fields and carried through, but nothing branches on them:
 
 - `SWITCHADD` leading `1`, and the per-port `0␝0␝false` subfields — identical on all
   four switches and unchanged by any operation performed so far.
-- Whether the device supports records beyond the three seen. Unknown verbs parse to
-  `Unknown` and appear in the TUI's raw pane (`r`) rather than raising.
 - Whether a UDP discovery/announce path exists alongside the TCP port — never checked.
+
+## Records beyond the three implemented
+
+The three verbs this client handles are not the whole vocabulary. String constants in
+the official client's `GH_Everyware_Client.jar` include:
+
+```
+SET_SWITCH   SWITCHUPDATE   SWITCHLOCKS      ← implemented
+SET_STACK    STACKADD                        ← stack switches, not implemented
+SET_TORNADO  TORNADOADD                      ← Tornado switches, not implemented
+```
+
+That the jar contains `SET_SWITCH`, `SWITCHUPDATE` and `SWITCHLOCKS` verbatim is also
+independent confirmation of the reverse engineering above.
+
+The stack and Tornado records were never observed on the wire, because no such hardware
+is attached here — their field layouts are unknown. `parse()` returns `Unknown` for
+them rather than raising, and they show up in the TUI's raw pane (`r`), so an
+installation that has them will surface them rather than silently dropping them.
+
+Rotator control is *not* part of this protocol. The `ROTOR*` strings in the jar
+(`UPDATE_ROTORS`, `ADD_ACTIVE_ROTOR`, …) are Swing UI constants, not wire verbs;
+rotator controllers are reached over separate raw-serial TCP ports speaking their own
+protocols, and are out of scope for this client.
 
 ## A note on the failed verb search
 
