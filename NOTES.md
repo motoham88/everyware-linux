@@ -45,9 +45,9 @@ On connect the device sends four `SWITCHADD` records, then streams
 `SWITCHUPDATE` + `SWITCHLOCKS` per switch, round-robin, every ~0.5–3.4 s indefinitely.
 
 **The roster does not arrive in sorted order** — the device announced
-`AS-84F-1, AS-84F-3, AS-84F-2, AS-84F-4`. Anything indexing switches by position must
-not use arrival order; `client._sort_key` sorts by the trailing number. This is not
-cosmetic: see the lock slot mapping below.
+`AS-84F-1, AS-84F-3, AS-84F-2, AS-84F-4`. That order is not cosmetic: it is the index
+basis for lock slots (below), so the client tracks it as `Panel.announced` and keeps it
+distinct from the sorted `Panel.order` used for display.
 
 ## Client → device
 
@@ -79,26 +79,43 @@ for over ten minutes with a growing `Send-Q`, and its queued NUL keepalives coal
 into 29-byte all-zero segments. That is why `Client` reconnects with backoff rather
 than trusting `ESTABLISHED` to mean anything.
 
-## SWITCHLOCKS — confirmed
+## SWITCHLOCKS
 
-Slot N carries the port currently selected by switch N (in sorted order), republished
-to **every** switch so a UI can grey out antennas in use elsewhere.
+Slot N carries the port currently selected by the Nth switch **in announcement
+order**, republished to every switch so a UI can grey out antennas in use elsewhere.
 
-Confirmed directly: after `SET_SWITCH␟AS-84F-4␟Beam-20`, all four switches reported
+Announcement order on this hardware is `AS-84F-1, AS-84F-3, AS-84F-2, AS-84F-4` — not
+sorted. So the slot mapping is:
+
+| slot | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| switch | AS-84F-1 | AS-84F-**3** | AS-84F-**2** | AS-84F-4 |
+
+Verified with a case that discriminates between the two candidate orderings —
+`SET_SWITCH␟AS-84F-3␟Beam-15` produced
 
 ```
-SWITCHLOCKS|AS-84F-1|OFF|OFF|OFF|Beam-20
-SWITCHLOCKS|AS-84F-2|OFF|OFF|OFF|Beam-20
-SWITCHLOCKS|AS-84F-3|OFF|OFF|OFF|Beam-20
-SWITCHLOCKS|AS-84F-4|OFF|OFF|OFF|Beam-20
+SWITCHLOCKS|AS-84F-1|OFF|Beam-15|OFF|OFF
 ```
 
-Slot 4 for switch 4 — which also confirms sorted order is the right mapping, since
-arrival order (1, 3, 2, 4) would have put it in slot 2.
+Slot 1. AS-84F-3 is announced second (index 1); under sorted order it would be index 2.
+A second case agrees: `Dipole-6` on `AS-84F-2` landed in slot 2, and AS-84F-2 is
+announced third.
+
+> **A trap worth recording.** This was first "confirmed" as *sorted* order using
+> `SET_SWITCH␟AS-84F-4␟Beam-20`, which landed in slot 3. That test proves nothing:
+> AS-84F-4 is index 3 under *both* orderings. Switches 2 and 3 are the only
+> discriminating cases here, and picking switch 4 produced a confident, wrong answer.
+> Choose the test case that can distinguish the hypotheses, not the one that is
+> convenient.
+
+Display order and lock order are therefore different things, and the client keeps them
+separate: `Panel.order` is sorted (so TUI columns do not jump around) while
+`Panel.announced` is arrival order and is what `locks_by_switch()` indexes.
 
 Locks propagate one switch per round-robin step, so the full set takes a few seconds
 to converge. A UI showing lock state will briefly show it on some switches and not
-others; this is the device's cadence, not a bug.
+others; that is the device's cadence, not a bug.
 
 ## Still unknown
 

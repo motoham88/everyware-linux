@@ -49,6 +49,9 @@ class SwitchState:
 class Panel:
     """Everything the device has told us. Never inferred from commands sent."""
     switches: dict[str, SwitchState] = field(default_factory=dict)
+    #: Switch names in the order the device announced them via SWITCHADD.
+    #: This is NOT display order -- it is the index basis for lock slots.
+    announced: list[str] = field(default_factory=list)
     connected: bool = False
     stale: bool = False
     last_error: str = ""
@@ -58,28 +61,29 @@ class Panel:
     def order(self) -> list[str]:
         """Switch names in a stable, predictable order.
 
-        Deliberately NOT arrival order: the device announced its roster as
-        AS-84F-1, AS-84F-3, AS-84F-2, AS-84F-4, and that ordering is not
-        guaranteed run to run. Sorting by the trailing number keeps TUI columns
-        put and gives `locks_by_switch` a defensible slot mapping.
+        Display order only. The device announces its roster as AS-84F-1,
+        AS-84F-3, AS-84F-2, AS-84F-4, which would make TUI columns jump around;
+        sorting by the trailing number keeps them put. Lock slots are indexed by
+        `announced`, not by this -- see `locks_by_switch`.
         """
         return sorted(self.switches, key=_sort_key)
 
     def locks_by_switch(self, name: str) -> dict[str, str]:
         """Which *other* switch, if any, currently holds each port.
 
-        Rests on two untested assumptions: that SWITCHLOCKS slot N carries the
-        port selected by switch N, and that "switch N" means the Nth switch in
-        `order`. Every observed lock value was "OFF" (nothing was selected
-        anywhere), so the capture cannot distinguish these from the alternatives.
+        Slot N holds the port selected by the Nth switch **in announcement
+        order** -- the order the device sent its SWITCHADD records, which on this
+        hardware is 1, 3, 2, 4 rather than sorted.
 
-        This is the only function that acts on locks, so it is the only thing
-        that needs correcting when the experiment in NOTES.md is run.
+        Verified with a discriminating case: selecting Beam-15 on AS-84F-3 put it
+        in slot 1, and AS-84F-3 is announced second. Sorted order would predict
+        slot 2. An earlier test using AS-84F-4 appeared to confirm sorted order
+        but proved nothing -- AS-84F-4 is index 3 under both orderings.
         """
         me = self.switches.get(name)
         if not me or not me.locks:
             return {}
-        order = self.order
+        order = self.announced
         held: dict[str, str] = {}
         for i, port in enumerate(me.locks):
             if i >= len(order) or order[i] == name:
@@ -136,7 +140,11 @@ class Client:
 
     def snapshot(self) -> Panel:
         with self._lock:
-            return replace(self._panel, switches=dict(self._panel.switches))
+            return replace(
+                self._panel,
+                switches=dict(self._panel.switches),
+                announced=list(self._panel.announced),
+            )
 
     # -- sending -----------------------------------------------------------
 
@@ -247,6 +255,10 @@ class Client:
                     prev or SwitchState(rec.switch),
                     ports=rec.port_names, last_update=now,
                 )
+                # First-seen SWITCHADD order fixes the lock slot mapping. Append
+                # only, so a reconnect replaying the roster cannot reorder it.
+                if rec.switch not in self._panel.announced:
+                    self._panel.announced.append(rec.switch)
             elif isinstance(rec, p.SwitchUpdate):
                 prev = switches.get(rec.switch) or SwitchState(rec.switch)
                 switches[rec.switch] = replace(

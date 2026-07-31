@@ -81,15 +81,37 @@ def test_unknown_records_are_ignored_by_the_state_model(client):
 
 # -- locks -----------------------------------------------------------------
 
-def test_locks_attribute_ports_to_the_right_switch(client):
+def test_locks_are_indexed_by_announcement_order_not_sorted_order(client):
+    """The device announces 1, 3, 2, 4 and indexes lock slots that way.
+
+    Verified on hardware: Beam-15 selected on AS-84F-3 landed in slot 1, and
+    AS-84F-3 is announced second. Sorted order would predict slot 2.
+    """
     for n in (1, 3, 2, 4):
-        feed(client, add(f"AS-84F-{n}", "Beam-20", "EFHW-40", "OFF"))
-    feed(client, locks("AS-84F-1", "OFF", "Beam-20", "OFF", "EFHW-40"))
+        feed(client, add(f"AS-84F-{n}", "Beam-15", "EFHW-40", "OFF"))
+    feed(client, locks("AS-84F-1", "OFF", "Beam-15", "EFHW-40", "OFF"))
 
     held = client.snapshot().locks_by_switch("AS-84F-1")
-    # Slot 2 -> AS-84F-2, slot 4 -> AS-84F-4 under sorted order. If arrival order
-    # were used these would be attributed to AS-84F-3 and AS-84F-4.
-    assert held == {"Beam-20": "AS-84F-2", "EFHW-40": "AS-84F-4"}
+    assert held == {"Beam-15": "AS-84F-3", "EFHW-40": "AS-84F-2"}
+
+
+def test_display_order_stays_sorted_even_though_locks_are_not(client):
+    for n in (1, 3, 2, 4):
+        feed(client, add(f"AS-84F-{n}", "OFF"))
+    snap = client.snapshot()
+    assert snap.order == ["AS-84F-1", "AS-84F-2", "AS-84F-3", "AS-84F-4"]
+    assert snap.announced == ["AS-84F-1", "AS-84F-3", "AS-84F-2", "AS-84F-4"]
+
+
+def test_replayed_roster_does_not_reorder_lock_slots(client):
+    """A reconnect makes the device resend every SWITCHADD."""
+    for n in (1, 3, 2, 4):
+        feed(client, add(f"AS-84F-{n}", "OFF"))
+    for n in (4, 2, 3, 1):  # a different order on the second pass
+        feed(client, add(f"AS-84F-{n}", "OFF"))
+    assert client.snapshot().announced == [
+        "AS-84F-1", "AS-84F-3", "AS-84F-2", "AS-84F-4",
+    ]
 
 
 def test_a_switch_does_not_lock_itself(client):
@@ -145,17 +167,17 @@ def test_select_never_updates_local_state():
 
 
 def test_locks_match_the_captured_response_to_a_real_selection(client):
-    """Verbatim from the capture: after SET_SWITCH AS-84F-4 Beam-20, every switch
-    reported slot 4 holding Beam-20."""
+    """Verbatim from hardware: Dipole-6 selected on AS-84F-2 appeared in slot 2
+    of every switch's SWITCHLOCKS -- AS-84F-2 being announced third."""
     for n in (1, 3, 2, 4):  # the device's actual announcement order
-        feed(client, add(f"AS-84F-{n}", "Beam-20", "OFF"))
+        feed(client, add(f"AS-84F-{n}", "Dipole-6", "OFF"))
     for n in (1, 2, 3, 4):
-        feed(client, locks(f"AS-84F-{n}", "OFF", "OFF", "OFF", "Beam-20"))
-    feed(client, update("AS-84F-4", "Beam-20", "-28"))
+        feed(client, locks(f"AS-84F-{n}", "OFF", "OFF", "Dipole-6", "OFF"))
+    feed(client, update("AS-84F-2", "Dipole-6", "-27"))
 
-    assert client.snapshot().locks_by_switch("AS-84F-1") == {"Beam-20": "AS-84F-4"}
+    assert client.snapshot().locks_by_switch("AS-84F-1") == {"Dipole-6": "AS-84F-2"}
     # The holder does not see its own selection as a lock.
-    assert client.snapshot().locks_by_switch("AS-84F-4") == {}
+    assert client.snapshot().locks_by_switch("AS-84F-2") == {}
 
 
 def test_snapshot_is_isolated_from_later_mutation(client):

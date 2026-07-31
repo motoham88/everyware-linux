@@ -19,6 +19,12 @@ HELP = "↑↓ port   ←→ switch   ⏎ select   o OFF   r raw   q quit"
 MAX_RAW = 400
 
 
+def _short(switch: str) -> str:
+    """Compact label for a lock marker: AS-84F-10 -> "10", not "0"."""
+    head, _, tail = switch.rpartition("-")
+    return tail if head and tail.isdigit() else switch
+
+
 class Panel:
     def __init__(self, stdscr, client: gh_client.Client, host: str):
         self.stdscr = stdscr
@@ -124,7 +130,7 @@ class Panel:
                 if sw.selected == port:
                     text, attr = "● ON", self.c(2) | curses.A_BOLD
                 elif owner:
-                    text, attr = f"◦ {owner[-1]}", self.c(3)
+                    text, attr = f"◦ {_short(owner)}", self.c(3)
                 else:
                     text, attr = "·", curses.A_DIM
                 if panel.stale:
