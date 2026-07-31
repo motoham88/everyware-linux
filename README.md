@@ -4,9 +4,12 @@ A Linux client for the Green Heron remote antenna switch panel — a curses TUI 
 4-switch × 9-antenna matrix, speaking the device's undocumented TCP protocol on port
 10000.
 
+Two front ends over one client library — a terminal panel and a GTK4 desktop app.
+
 ```
-./gh-panel 192.0.2.10          # your switch's address
-export GH_SWITCH_HOST=...      # ...or set this and just run ./gh-panel
+./gh-panel 192.0.2.10          # curses TUI; your switch's address
+./gh-gui   192.0.2.10          # GTK4 window
+export GH_SWITCH_HOST=...      # ...or set this and pass no address
 ```
 
 ```
@@ -47,6 +50,7 @@ than guessed at. See NOTES.md for the full protocol and the remaining unknowns.
 | `greenheron/protocol.py` | framing and record parsing — pure, no I/O |
 | `greenheron/client.py` | socket, state tracking, reconnect, keepalive |
 | `greenheron/tui.py` | curses panel |
+| `greenheron/gui.py` | GTK4 panel |
 | `ghprobe.py` | hexdump whatever the device sends — the debugging oracle |
 | `tools/` | pcap extraction and protocol experiments |
 | `NOTES.md` | the protocol, how each claim was established, and open questions |
@@ -54,9 +58,12 @@ than guessed at. See NOTES.md for the full protocol and the remaining unknowns.
 ## Tests
 
 ```
-python3 -m venv .venv && .venv/bin/pip install pytest
+python3 -m venv --system-site-packages .venv && .venv/bin/pip install pytest
 .venv/bin/python -m pytest tests/
 ```
+
+`--system-site-packages` is what lets the venv see PyGObject, which is a distro
+package rather than a wheel. Without it the GTK tests skip and the rest still run.
 
 Protocol fixtures are verbatim bytes captured off the device, not hand-written.
 Connection tests run against a local stand-in server, including records delivered one
