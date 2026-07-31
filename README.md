@@ -14,16 +14,23 @@ and an MQTT bridge with Home Assistant discovery.
 export GH_SWITCH_HOST=...      # ...or set this and pass no address
 ```
 
+![The GTK4 panel](docs/gtk-panel.png)
+
+`Beam-20` is live on AS-84F-2; the other three switches show it as `in use · AS-84F-2`
+and cannot select it. Everything else sits on `OFF`.
+
+The same grid in the terminal:
+
 ```
 Green Heron switch panel — 192.0.2.10:10000              connected 0m08s
 
 Antenna              AS-84F-1  AS-84F-2  AS-84F-3  AS-84F-4
 Beam-10                 ·         ·         ·         ·
 Beam-15                 ·         ·         ·         ·
-Beam-20                 ·         ·         ·         ·
+Beam-20                ◦ 2       ● ON      ◦ 2       ◦ 2
 EFHW-40                 ·         ·         ·         ·
 ...
-OFF                    ● ON      ● ON      ● ON      ● ON
+OFF                    ● ON       ·        ● ON      ● ON
 ```
 
 `↑↓` port · `←→` switch · `⏎` select · `o` OFF · `r` raw protocol · `q` quit
