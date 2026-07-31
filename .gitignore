@@ -1,0 +1,14 @@
+# virtualenv
+.venv/
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# capture artefacts -- regenerable, and they carry LAN traffic.
+# The protocol facts they established live in NOTES.md; add one with
+# `git add -f` if you want the raw evidence preserved.
+*.pcap
+*.pcapng
+ghprobe.log
