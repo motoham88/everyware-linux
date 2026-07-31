@@ -1,0 +1,46 @@
+; systemd --user unit for the Green Heron MQTT bridge.
+;
+;   mkdir -p ~/.config/systemd/user
+;   cp packaging/gh-mqtt.service ~/.config/systemd/user/
+;   cp packaging/gh-mqtt.env     ~/.config/gh-mqtt.env    # then edit it
+;   chmod 600 ~/.config/gh-mqtt.env
+;   systemctl --user daemon-reload
+;   systemctl --user enable --now gh-mqtt
+;   journalctl --user -u gh-mqtt -f
+;
+; To keep it running when you are not logged in:
+;   sudo loginctl enable-linger $USER
+
+[Unit]
+Description=Green Heron antenna switch to MQTT bridge
+Documentation=https://github.com/motoham88/everyware-linux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+; Credentials come from the environment file so they stay out of the process
+; list, where anyone running `ps` would otherwise see them.
+EnvironmentFile=%h/.config/gh-mqtt.env
+ExecStart=%h/github/GHClient/gh-mqtt
+Restart=always
+RestartSec=10
+
+; The bridge reconnects to both the switch and the broker on its own, so a
+; restart here is only for the cases it cannot recover from itself.
+StandardOutput=journal
+StandardError=journal
+
+; It needs nothing but a network socket.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=true
+MemoryDenyWriteExecute=true
+
+[Install]
+WantedBy=default.target

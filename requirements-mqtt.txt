@@ -1,0 +1,3 @@
+# Runtime dependency for gh-mqtt only. The TUI, the GTK client and the
+# greenheron library itself need nothing outside the standard library.
+paho-mqtt>=2.0

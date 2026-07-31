@@ -4,11 +4,13 @@ A Linux client for the Green Heron remote antenna switch panel — a curses TUI 
 4-switch × 9-antenna matrix, speaking the device's undocumented TCP protocol on port
 10000.
 
-Two front ends over one client library — a terminal panel and a GTK4 desktop app.
+Three front ends over one client library — a terminal panel, a GTK4 desktop app,
+and an MQTT bridge with Home Assistant discovery.
 
 ```
 ./gh-panel 192.0.2.10          # curses TUI; your switch's address
 ./gh-gui   192.0.2.10          # GTK4 window
+./gh-mqtt  192.0.2.10 --broker 192.0.2.20
 export GH_SWITCH_HOST=...      # ...or set this and pass no address
 ```
 
@@ -43,6 +45,36 @@ Everyware Client, and the device responds to both identically.
 Two `SWITCHADD`/`SWITCHUPDATE` fields have no known meaning and are shown raw rather
 than guessed at. See NOTES.md for the full protocol and the remaining unknowns.
 
+## Home Assistant
+
+```
+pip install -r requirements-mqtt.txt
+./gh-mqtt 192.0.2.10 --broker 192.0.2.20 --username ha --password ...
+```
+
+Each switch is announced as a **`select`** entity whose options are the antenna
+names the device advertises, so all four appear under one HA device as four
+dropdowns. That is the entity type that matches the hardware: a switch is on
+exactly one of nine ports, which is a choice, not a set of toggles. Nothing to add
+to `configuration.yaml` — discovery configs are published retained, so Home
+Assistant repopulates on its own after a restart.
+
+| topic | |
+|---|---|
+| `greenheron/availability` | `online` / `offline` — also the last will |
+| `greenheron/as_84f_1/state` | selected port, retained |
+| `greenheron/as_84f_1/set` | write a port name here to select it |
+| `greenheron/as_84f_1/attributes` | JSON: locks, holder, ports, raw telemetry |
+
+Entities go unavailable when the bridge loses either the broker or the switch, so
+a stale dropdown never looks live. Commands are published with `optimistic: false`
+— HA waits for the device to confirm rather than assuming the relay moved.
+
+Credentials are read from `$GH_MQTT_USERNAME` / `$GH_MQTT_PASSWORD` as well as
+flags, which keeps them out of your shell history and out of `ps`.
+
+To run it as a service, see `packaging/gh-mqtt.service`.
+
 ## Layout
 
 | | |
@@ -51,6 +83,8 @@ than guessed at. See NOTES.md for the full protocol and the remaining unknowns.
 | `greenheron/client.py` | socket, state tracking, reconnect, keepalive |
 | `greenheron/tui.py` | curses panel |
 | `greenheron/gui.py` | GTK4 panel |
+| `greenheron/mqtt_bridge.py` | MQTT + Home Assistant discovery |
+| `packaging/` | systemd user unit and environment file |
 | `ghprobe.py` | hexdump whatever the device sends — the debugging oracle |
 | `tools/` | pcap extraction and protocol experiments |
 | `NOTES.md` | the protocol, how each claim was established, and open questions |

@@ -1,0 +1,5 @@
+pytest>=8.0
+# Pure-Python MQTT broker, used to test the bridge end to end without
+# installing one system-wide. Tests skip cleanly if it is absent.
+amqtt>=0.11
+paho-mqtt>=2.0

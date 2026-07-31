@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Bridge the Green Heron switch to MQTT / Home Assistant."""
+
+import argparse
+import logging
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from greenheron import protocol as p
+from greenheron import mqtt_bridge as mb
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        description="Publish Green Heron switch state to MQTT with Home Assistant discovery",
+        epilog="Credentials may also come from $GH_MQTT_USERNAME / $GH_MQTT_PASSWORD, "
+               "which keeps them out of your shell history and process list.",
+    )
+    ap.add_argument("host", nargs="?", default=os.environ.get("GH_SWITCH_HOST"),
+                    help="switch address; defaults to $GH_SWITCH_HOST")
+    ap.add_argument("-p", "--port", type=int, default=p.DEFAULT_PORT)
+
+    b = ap.add_argument_group("broker")
+    b.add_argument("--broker", default=os.environ.get("GH_MQTT_BROKER", "localhost"))
+    b.add_argument("--broker-port", type=int,
+                   default=int(os.environ.get("GH_MQTT_PORT", 1883)))
+    b.add_argument("--username", default=os.environ.get("GH_MQTT_USERNAME"))
+    b.add_argument("--password", default=os.environ.get("GH_MQTT_PASSWORD"))
+    b.add_argument("--tls", action="store_true", help="use TLS to the broker")
+
+    t = ap.add_argument_group("topics")
+    t.add_argument("--prefix", default=mb.DEFAULT_PREFIX)
+    t.add_argument("--discovery-prefix", default=mb.DEFAULT_DISCOVERY_PREFIX)
+    t.add_argument("--node-id", default=mb.DEFAULT_NODE_ID)
+    t.add_argument("--no-discovery", action="store_true",
+                   help="publish state only; do not announce entities to Home Assistant")
+
+    ap.add_argument("--dry-run", action="store_true",
+                    help="publish state, but never transmit to the switch")
+    ap.add_argument("-v", "--verbose", action="store_true")
+    args = ap.parse_args()
+
+    if not args.host:
+        ap.error("no switch address given; pass one or set $GH_SWITCH_HOST")
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s  %(levelname)-7s %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    topics = mb.Topics(prefix=args.prefix,
+                       discovery_prefix=args.discovery_prefix,
+                       node_id=args.node_id)
+
+    return mb.run(
+        args.host, args.port,
+        broker=args.broker, broker_port=args.broker_port,
+        username=args.username, password=args.password,
+        topics=topics, discovery=not args.no_discovery,
+        dry_run=args.dry_run, tls=args.tls,
+    )
+
+
+if __name__ == "__main__":
+    sys.exit(main())
