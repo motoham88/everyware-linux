@@ -117,14 +117,25 @@ Locks propagate one switch per round-robin step, so the full set takes a few sec
 to converge. A UI showing lock state will briefly show it on some switches and not
 others; that is the device's cadence, not a bug.
 
+## SWITCHUPDATE field 4 — the wireless link signal
+
+`-27` on switches 1–2, `-28` on 3–4, stable across every sample including while relays
+were switching. Identified by the operator as the **Green Heron wireless link signal**,
+not anything to do with antenna selection.
+
+It is parsed into `SwitchUpdate.wireless_signal` and carried through to
+`SwitchState.wireless_signal`, but no front end displays it — it was cluttering the
+switch grid with something that says nothing about switch state. The MQTT bridge still
+exposes it as a `wireless_signal` attribute for anyone who wants to monitor the link.
+
+No unit is asserted anywhere. The values look like they could be dBm, but the scale was
+never established from the wire and the operator's description does not pin it down, so
+labelling it would be a guess presented as fact.
+
 ## Still unknown
 
-Parsed into named fields and carried through, but nothing branches on them and the TUI
-shows them without an interpretive label:
+Parsed into named fields and carried through, but nothing branches on them:
 
-- `SWITCHUPDATE` field 4 — `-27` on switches 1–2, `-28` on 3–4, stable across every
-  sample including while relays were switching. Could be signal, temperature, or a raw
-  ADC count. Not enough evidence to pick one, so it is displayed raw and unlabelled.
 - `SWITCHADD` leading `1`, and the per-port `0␝0␝false` subfields — identical on all
   four switches and unchanged by any operation performed so far.
 - Whether the device supports records beyond the three seen. Unknown verbs parse to

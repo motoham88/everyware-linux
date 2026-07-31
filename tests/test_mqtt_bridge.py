@@ -117,7 +117,7 @@ def test_discovery_is_not_optimistic(rig):
     assert cfg["optimistic"] is False
 
 
-def test_discovery_declares_no_unit_for_the_unknown_telemetry(rig):
+def test_discovery_declares_no_unit_or_device_class(rig):
     gh, mqtt, bridge = rig
     roster(gh, bridge)
     cfg = json.loads(mqtt.last(bridge.topics.discovery("AS-84F-1")))
@@ -163,14 +163,14 @@ def test_unchanged_state_is_not_republished(rig):
     assert len(hits) == 1
 
 
-def test_attributes_carry_locks_and_raw_telemetry(rig):
+def test_attributes_carry_locks_and_wireless_signal(rig):
     gh, mqtt, bridge = rig
     roster(gh, bridge)
     feed(gh, bridge,
          rec("SWITCHUPDATE", "AS-84F-2", "Dipole-6", "0", "-27"),
          rec("SWITCHLOCKS", "AS-84F-1", "OFF", "OFF", "Dipole-6", "OFF"))
     attrs = json.loads(mqtt.last("greenheron/as_84f_1/attributes"))
-    assert attrs["telemetry_raw"] == ""  # AS-84F-1 has had no SWITCHUPDATE
+    assert attrs["wireless_signal"] == ""  # AS-84F-1 has had no SWITCHUPDATE
     # Slot 2 is AS-84F-2 under announcement order, not AS-84F-3.
     assert attrs["in_use_elsewhere"] == {"Dipole-6": "AS-84F-2"}
     assert attrs["ports"] == list(PORTS)

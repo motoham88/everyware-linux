@@ -29,7 +29,6 @@ CSS = """
                   font-weight: bold; }
 .port-locked    { opacity: 0.5; font-style: italic; }
 .switch-header  { font-weight: bold; }
-.telemetry      { opacity: 0.65; font-size: 0.85em; }
 .status-ok      { color: #2e7d32; font-weight: bold; }
 .status-warn    { color: #c77800; font-weight: bold; }
 .antenna-label  { font-family: monospace; }
@@ -68,11 +67,6 @@ class PanelWindow(Gtk.ApplicationWindow):
         scroller = Gtk.ScrolledWindow(vexpand=True)
         scroller.set_child(self.grid)
         root.append(scroller)
-
-        self.telemetry = Gtk.Label(label="")
-        self.telemetry.add_css_class("telemetry")
-        self.telemetry.set_margin_bottom(8)
-        root.append(self.telemetry)
 
         self.message = Gtk.Label(label="")
         self.message.set_margin_bottom(8)
@@ -163,12 +157,8 @@ class PanelWindow(Gtk.ApplicationWindow):
             self.status.remove_css_class("status-ok")
             self.status.add_css_class("status-warn")
 
-        # Field 4 of SWITCHUPDATE. Meaning unknown, so it is shown raw and
-        # deliberately not given a unit.
-        self.telemetry.set_label(
-            "unknown telemetry:   "
-            + "    ".join(f"{n} = {panel.switches[n].telemetry or '?'}" for n in names)
-        )
+        # SWITCHUPDATE field 4 is the Green Heron wireless link signal, not
+        # anything about antenna selection, so it is parsed but not shown here.
         return False
 
     # -- input -------------------------------------------------------------

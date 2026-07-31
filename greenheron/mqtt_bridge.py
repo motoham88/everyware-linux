@@ -11,7 +11,7 @@ Topic layout (prefix configurable, default `greenheron`):
     greenheron/availability          online | offline   (retained, also the LWT)
     greenheron/as_84f_1/state        currently selected port    (retained)
     greenheron/as_84f_1/set          write a port name here to select it
-    greenheron/as_84f_1/attributes   JSON: locks, holder, ports, raw telemetry
+    greenheron/as_84f_1/attributes   JSON: locks, holder, ports, wireless signal
 
 Discovery configs are published retained under `homeassistant/select/...`, so
 Home Assistant repopulates after a restart without the bridge doing anything.
@@ -137,9 +137,10 @@ class Bridge:
                     "locks": list(sw.locks),
                     # Which other switch holds each port, per SWITCHLOCKS.
                     "in_use_elsewhere": held,
-                    # SWITCHUPDATE field 4. Meaning unknown -- passed through
-                    # raw and deliberately given no unit or device_class.
-                    "telemetry_raw": sw.telemetry,
+                    # The Green Heron wireless link signal, not antenna
+                    # state. Exposed for anyone who wants it, with no unit
+                    # asserted -- the scale was never established.
+                    "wireless_signal": sw.wireless_signal,
                 }
                 self._publish(self.topics.attributes(name),
                               json.dumps(attrs, sort_keys=True), retain=True)

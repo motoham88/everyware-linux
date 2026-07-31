@@ -143,13 +143,8 @@ class Panel:
 
     def _footer(self, panel, names, y: int, h: int, w: int) -> None:
         y = min(y + 1, h - 4)
-        # Field 4 of SWITCHUPDATE. Meaning unknown -- shown raw, deliberately
-        # not labelled with a unit we would only be guessing at.
-        tele = "  ".join(
-            f"{n}={panel.switches[n].telemetry or '?'}" for n in names
-        )
-        self.put(y, 0, f"unknown telemetry: {tele}", curses.A_DIM)
-
+        # SWITCHUPDATE field 4 is the Green Heron wireless link signal, not
+        # anything about antenna selection, so it is parsed but not shown here.
         if self.show_raw:
             self.put(y + 1, 0, "raw:", curses.A_DIM)
             lines = self.raw[-(h - y - 4):] if h - y - 4 > 0 else []

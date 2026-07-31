@@ -140,9 +140,9 @@ def test_stale_state_disables_the_grid(win):
     assert "status-warn" in win.status.get_css_classes()
 
 
-def test_telemetry_is_shown_without_a_unit(win):
+def test_wireless_signal_is_parsed_but_not_displayed(win):
+    """It reports the Green Heron wireless link, not antenna state, so it has no
+    place in the switch grid -- but it must still parse."""
     feed(win, rec("SWITCHUPDATE", "AS-84F-1", "OFF", "0", "-27"))
-    label = win.telemetry.get_label()
-    assert "-27" in label and "unknown" in label
-    for unit in ("dBm", "dB", "°C", "volt"):
-        assert unit not in label
+    assert win.client.snapshot().switches["AS-84F-1"].wireless_signal == "-27"
+    assert not hasattr(win, "telemetry")

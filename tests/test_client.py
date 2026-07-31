@@ -38,7 +38,7 @@ def test_roster_and_selection_are_tracked(client):
     sw = client.snapshot().switches["AS-84F-1"]
     assert sw.ports == ("Beam-20", "OFF")
     assert sw.selected == "Beam-20"
-    assert sw.telemetry == "-27"
+    assert sw.wireless_signal == "-27"
 
 
 def test_switch_order_is_stable_regardless_of_arrival_order(client):

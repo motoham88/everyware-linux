@@ -41,7 +41,7 @@ class SwitchState:
     ports: tuple[str, ...] = ()
     selected: str = ""
     locks: tuple[str, ...] = ()
-    telemetry: str = ""
+    wireless_signal: str = ""
     last_update: float = 0.0
 
 
@@ -263,7 +263,7 @@ class Client:
                 prev = switches.get(rec.switch) or SwitchState(rec.switch)
                 switches[rec.switch] = replace(
                     prev, selected=rec.selected,
-                    telemetry=rec.telemetry, last_update=now,
+                    wireless_signal=rec.wireless_signal, last_update=now,
                 )
             elif isinstance(rec, p.SwitchLocks):
                 prev = switches.get(rec.switch) or SwitchState(rec.switch)

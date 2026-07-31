@@ -42,8 +42,8 @@ Everyware Client, and the device responds to both identically.
 - Lock display — antennas held by another switch are marked `◦ N`
 - Reconnect with backoff; last known state stays visible, flagged stale
 
-Two `SWITCHADD`/`SWITCHUPDATE` fields have no known meaning and are shown raw rather
-than guessed at. See NOTES.md for the full protocol and the remaining unknowns.
+A few `SWITCHADD` sub-fields still have no established meaning; they are parsed and
+carried but nothing branches on them. See NOTES.md for the full protocol.
 
 ## Home Assistant
 
@@ -64,7 +64,7 @@ Assistant repopulates on its own after a restart.
 | `greenheron/availability` | `online` / `offline` — also the last will |
 | `greenheron/as_84f_1/state` | selected port, retained |
 | `greenheron/as_84f_1/set` | write a port name here to select it |
-| `greenheron/as_84f_1/attributes` | JSON: locks, holder, ports, raw telemetry |
+| `greenheron/as_84f_1/attributes` | JSON: locks, holder, ports, wireless signal |
 
 Entities go unavailable when the bridge loses either the broker or the switch, so
 a stale dropdown never looks live. Commands are published with `optimistic: false`

@@ -93,13 +93,14 @@ class SwitchAdd:
 class SwitchUpdate:
     """Current selection for one switch.
 
-    `telemetry` was -27 or -28 depending on the switch, stable over the whole
-    sample. Its meaning is unknown -- it is displayed raw and never interpreted.
+    `wireless_signal` is the Green Heron wireless link signal -- -27 or -28
+    depending on the switch, and unrelated to antenna selection. It is parsed and
+    carried, but no front end displays it and no unit is asserted for it.
     """
     switch: str
     selected: str
     unknown_c: str = "0"
-    telemetry: str = ""
+    wireless_signal: str = ""
     raw: bytes = b""
 
 
@@ -107,11 +108,11 @@ class SwitchUpdate:
 class SwitchLocks:
     """Four lock slots for one switch.
 
-    Working hypothesis: slot N carries the port currently selected by switch N,
+    Slot N carries the port selected by the Nth switch **in announcement order**,
     republished to every switch so a UI can grey out antennas in use elsewhere.
-    Every observed value was "OFF" (nothing was selected anywhere), so the
-    hypothesis is untested. `locks_by_switch()` on SwitchPanel is the only place
-    that acts on it, so it is cheap to correct.
+    Confirmed on hardware; see NOTES.md, including why an earlier test appeared
+    to confirm sorted order and did not. `Panel.locks_by_switch()` is the only
+    place that acts on this.
     """
     switch: str
     locks: tuple[str, ...] = ()
@@ -156,7 +157,7 @@ def parse(record: bytes) -> Record:
     if verb == "SWITCHUPDATE" and len(rest) >= 2:
         f = [_decode(x) for x in rest] + [""] * 4
         return SwitchUpdate(
-            switch=f[0], selected=f[1], unknown_c=f[2], telemetry=f[3], raw=record
+            switch=f[0], selected=f[1], unknown_c=f[2], wireless_signal=f[3], raw=record
         )
 
     if verb == "SWITCHLOCKS" and len(rest) >= 1:

@@ -94,7 +94,7 @@ def test_parse_switchupdate():
     assert rec.selected == "OFF"
     # Carried through verbatim, never interpreted.
     assert rec.unknown_c == "0"
-    assert rec.telemetry == "-27"
+    assert rec.wireless_signal == "-27"
 
 
 def test_parse_switchlocks():
